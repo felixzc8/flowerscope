@@ -88,23 +88,9 @@ export class Flower {
       if (this.y > H - h) { this.y = H - h; this.vy = -Math.abs(this.vy) * bounce; }
     }
 
-    if (state.wfActive && state.wfCount > 1 && this.x >= state.wfLeft && this.x <= state.wfRight) {
-      const t01 = (this.x - state.wfLeft) / (state.wfRight - state.wfLeft);
-      const fi = t01 * (state.wfCount - 1);
-      const i = Math.max(0, Math.min(Math.floor(fi), state.wfCount - 2));
-      const frac = fi - i;
-      const wfY = state.wfYs[i] + (state.wfYs[i + 1] - state.wfYs[i]) * frac;
-      const dist = this.y - wfY;
-      const repelZone = h * 0.3;
-      if (Math.abs(dist) < repelZone) {
-        const strength = (1 - Math.abs(dist) / repelZone) * 0.1;
-        this.vy += (dist > 0 ? strength : -strength);
-      }
-    }
-
     if (state.gradient) {
       if (frameGradValid) {
-        const t01 = Math.max(0, Math.min(1, this.x / W));
+        const t01 = Math.max(0, Math.min(1, (this.x - L) / (W - L)));
         const hue = ((frameGradH1 + frameGradDiff * t01) % 360 + 360) % 360;
         this.currentFilter = gradFilters[Math.round(hue) % 360];
       } else {
@@ -112,7 +98,8 @@ export class Flower {
       }
     }
 
-    this.currentOpacity = Math.min(1, this.baseOp + state.bassEnergy * 0.5);
+    const opTarget = Math.min(1, this.baseOp + state.bassEnergy * 0.5);
+    this.currentOpacity += (opTarget - this.currentOpacity) * 0.18;
 
     if (!state.isRecording) {
       this.el.style.transform = `translate(${this.x - this.size / 2}px, ${this.y - this.size / 2}px) rotate(${this.rot}deg) scale(${this.scale})`;

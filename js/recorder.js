@@ -1,8 +1,9 @@
 import { state } from './state.js';
-import { recordBtn } from './dom.js';
+import { recordBtn, bgImage } from './dom.js';
 import { pausePlayback } from './playback.js';
 import { updateAllFlowers } from './flowers.js';
 import { analyseScope, renderScopeToCtx, cacheCanvasRect } from './scope.js';
+import { renderVScopeToCtx } from './vscope.js';
 import { renderOverviewToCtx } from './overview.js';
 import { hslToRgb } from './theme.js';
 
@@ -21,15 +22,30 @@ function buildRecConfig(recW, recH, flowerImg) {
   const sy = recH / vh;
 
   let scopeW, scopeH, scopeX, scopeY;
+  const ovH = 50 * sy;
+  const vscopeH = (recH - ovH) * 0.78;
+  const vscopeW = vscopeH * 0.2;
+  const vscopeX = state.recVertical ? 0 : cropX * sx;
+  const vscopeY = (recH - vscopeH) / 2;
+
+  const bgX = (state.bgX - cropX) * sx;
+  const bgY = state.bgY * sy;
+  const bgW = state.bgW * sx;
+  const bgH = state.bgH * sy;
+
   if (state.recVertical) {
-    scopeW = recW * 0.92;
-    scopeH = scopeW * (state.displayH / state.displayW);
+    const remainW = recW - vscopeW;
+    const pad = 16 * sx;
+    scopeW = remainW * 0.85;
+    scopeH = Math.min(recH * 0.18, 180 * sy);
+    scopeX = vscopeW + (remainW - scopeW) / 2 - pad;
+    scopeY = recH - ovH - scopeH - pad;
   } else {
     scopeW = state.displayW * sx;
     scopeH = state.displayH * sy;
+    scopeX = (recW - scopeW) / 2;
+    scopeY = (recH - scopeH) / 2;
   }
-  scopeX = (recW - scopeW) / 2;
-  scopeY = (recH - scopeH) / 2;
 
   const ar = flowerImg
     ? (flowerImg.naturalHeight || flowerImg.height) / (flowerImg.naturalWidth || flowerImg.width)
@@ -37,19 +53,28 @@ function buildRecConfig(recW, recH, flowerImg) {
   const col = state.activeHue === null ? '255,255,255' : hslToRgb(state.activeHue);
   const useSharedFilter = !!flowerImg && !state.gradient;
 
-  return { recW, recH, cropX, sx, sy, scopeW, scopeH, scopeX, scopeY, ar, col, useSharedFilter, ovH: 50 * sy };
+  return { recW, recH, cropX, sx, sy, scopeW, scopeH, scopeX, scopeY, vscopeW, vscopeH, vscopeX, vscopeY, bgX, bgY, bgW, bgH, ar, col, useSharedFilter, ovH };
 }
 
-function compositeRecFrame(flowerImg, cfg) {
-  const { recW, recH, cropX, sx, sy, scopeW, scopeH, scopeX, scopeY, ar, col, useSharedFilter, ovH } = cfg;
+function compositeRecFrame(flowerImg, cfg, recBgImg) {
+  const { recW, recH, cropX, sx, sy, scopeW, scopeH, scopeX, scopeY, vscopeW, vscopeH, vscopeX, vscopeY, bgX, bgY, bgW, bgH, ar, col, useSharedFilter, ovH } = cfg;
   const c = state.recCtx;
 
   c.fillStyle = '#0e0e0e';
   c.fillRect(0, 0, recW, recH);
 
+  if (recBgImg && bgW > 0 && bgH > 0) {
+    c.drawImage(recBgImg, bgX, bgY, bgW, bgH);
+  }
+
   c.save();
   c.translate(scopeX, scopeY);
   renderScopeToCtx(c, scopeW, scopeH);
+  c.restore();
+
+  c.save();
+  c.translate(vscopeX, vscopeY);
+  renderVScopeToCtx(c, vscopeW, vscopeH);
   c.restore();
 
   c.globalCompositeOperation = 'screen';
@@ -145,6 +170,16 @@ export async function startOfflineRecording() {
     img.onerror = () => res(null);
     img.src = state.iconSrc;
   });
+
+  let recBgImg = null;
+  if (state.bgImageSrc) {
+    recBgImg = await new Promise((res) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => res(null);
+      img.src = state.bgImageSrc;
+    });
+  }
 
   const recW = state.recVertical ? 1080 : 1920;
   const recH = state.recVertical ? 1920 : 1080;
@@ -268,7 +303,7 @@ export async function startOfflineRecording() {
         state.playOffset = frameTime;
         analyseScope();
         updateAllFlowers(frameTime);
-        compositeRecFrame(recFlowerImg, recCfg);
+        compositeRecFrame(recFlowerImg, recCfg, recBgImg);
 
         const vf = new VideoFrame(state.recCanvas, {
           timestamp: Math.round(frame * 1_000_000 / fps)

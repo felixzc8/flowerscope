@@ -13,8 +13,7 @@ export const colorPresets = [
 
 export function getThemeFill() {
   if (state.gradient) return state.gradColor1;
-  if (state.activeHue === null) return '#ffffff';
-  return colorPicker.value || `hsl(${state.activeHue}, 100%, 50%)`;
+  return colorPicker.value;
 }
 
 const playSVG = () => `<svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21" fill="${getThemeFill()}"/></svg>`;
@@ -25,13 +24,19 @@ export function setPlayIcon(playing) {
 }
 
 export function getAccentColor(a) {
-  if (state.activeHue === null) return `rgba(255,255,255,${a})`;
-  return `hsla(${state.activeHue}, 100%, 50%, ${a})`;
+  const hex = colorPicker.value;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${a})`;
 }
 
 export function getAccentColorDim() {
-  if (state.activeHue === null) return '#aaaaaa';
-  return `hsl(${state.activeHue}, 80%, 35%)`;
+  const hex = colorPicker.value;
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * 0.45);
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * 0.45);
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * 0.45);
+  return `rgb(${r},${g},${b})`;
 }
 
 export function hslToRgb(h) {
@@ -69,10 +74,9 @@ export function getFlowerFilter() {
 }
 
 export function applyTheme() {
-  const accent = state.activeHue === null ? '#ffffff' : `hsl(${state.activeHue}, 100%, 50%)`;
-  const accentDim = state.activeHue === null ? '#aaaaaa' : `hsl(${state.activeHue}, 80%, 35%)`;
+  const accent = colorPicker.value;
   document.documentElement.style.setProperty('--accent', accent);
-  document.documentElement.style.setProperty('--accent-dim', accentDim);
+  document.documentElement.style.setProperty('--accent-dim', getAccentColorDim());
   state.gradHue1 = hexToHue(state.gradColor1);
   state.gradHue2 = hexToHue(state.gradColor2);
   if (!state.gradient) {
@@ -106,9 +110,11 @@ export function initSwatches() {
     swatchContainer.insertBefore(el, colorPicker);
   });
 
-  colorPicker.addEventListener('input', () => {
+  const onPickerChange = () => {
     clearSwatchActive();
     state.activeHue = hexToHue(colorPicker.value);
     applyTheme();
-  });
+  };
+  colorPicker.addEventListener('input', onPickerChange);
+  colorPicker.addEventListener('change', onPickerChange);
 }

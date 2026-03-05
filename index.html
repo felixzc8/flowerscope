@@ -19,6 +19,13 @@ html, body {
   pointer-events: none;
   z-index: 10;
 }
+#vscope {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 10;
+}
 #overview {
   position: fixed;
   bottom: 0; left: 0;
@@ -85,6 +92,7 @@ html, body {
   mix-blend-mode: screen;
   z-index: 15;
   object-fit: contain;
+  will-change: transform, opacity;
 }
 #iconSelect {
   background: #1e1e1e;
@@ -166,11 +174,44 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
 }
 #mobileOverlayL { left: 0; }
 #mobileOverlayR { right: 0; }
+#bgWrap {
+  position: absolute;
+  z-index: 5;
+  display: none;
+  cursor: move;
+}
+#bgWrap #bgImage {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  display: block;
+}
+#bgResize {
+  position: absolute;
+  right: -4px; bottom: -4px;
+  width: 14px; height: 14px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+#bgResize::after {
+  content: '';
+  position: absolute;
+  right: 2px; bottom: 2px;
+  width: 8px; height: 8px;
+  border-right: 2px solid rgba(255,255,255,0.5);
+  border-bottom: 2px solid rgba(255,255,255,0.5);
+}
+#bgWrap:hover #bgResize { opacity: 1; }
+#bgInput { display: none; }
 </style>
 </head>
 <body>
 
+<div id="bgWrap"><img id="bgImage"><div id="bgResize"></div></div>
 <canvas id="scope"></canvas>
+<canvas id="vscope"></canvas>
 
 <div class="menu-wrap">
   <button class="menu-toggle" id="menuBtn">Menu</button>
@@ -197,6 +238,11 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
     <div class="menu-section">
       <span class="menu-label">Icon</span>
       <select id="iconSelect"><option value="assets/shisoflower.png">Flower</option></select>
+    </div>
+    <div class="menu-section">
+      <span class="menu-label">Background</span>
+      <label class="btn" for="bgInput">Choose Image</label>
+      <input type="file" id="bgInput" accept="image/*">
     </div>
     <div class="menu-section">
       <span class="menu-label">Settings</span>

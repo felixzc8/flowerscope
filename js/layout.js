@@ -1,10 +1,15 @@
 import { state } from './state.js';
-import { canvas, ctx, overviewCanvas, ovCtx, mobileOverlayL, mobileOverlayR } from './dom.js';
+import { canvas, ctx, vcanvas, vctx, overviewCanvas, ovCtx, mobileOverlayL, mobileOverlayR, bgWrap } from './dom.js';
 import { renderOverview } from './overview.js';
 
 export function layout() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+
+  const vsH = (vh - 50) * 0.78;
+  const vsW = vsH * 0.2;
+  state.vDisplayW = vsW;
+  state.vDisplayH = vsH;
 
   let sw, sh;
 
@@ -14,8 +19,18 @@ export function layout() {
     state.cropX = cropX;
     state.cropW = cropW;
 
-    sw = cropW * 0.92;
-    sh = Math.min(vh * 0.48, 440);
+    const remainW = cropW - vsW;
+    sw = remainW * 0.85;
+    sh = Math.min(vh * 0.18, 180);
+
+    vcanvas.style.left = cropX + 'px';
+
+    const pad = 16;
+    const scopeCenterX = cropX + vsW + (remainW - sw) / 2 + sw / 2 - pad;
+    const scopeBottom = vh - 50;
+    canvas.style.left = scopeCenterX + 'px';
+    canvas.style.top = (scopeBottom - sh / 2 - pad) + 'px';
+    canvas.style.transform = 'translate(-50%, -50%)';
 
     mobileOverlayL.style.display = 'block';
     mobileOverlayL.style.width = cropX + 'px';
@@ -30,6 +45,12 @@ export function layout() {
 
     state.cropX = 0;
     state.cropW = vw;
+
+    vcanvas.style.left = '0px';
+
+    canvas.style.left = '50%';
+    canvas.style.top = '50%';
+    canvas.style.transform = 'translate(-50%, -50%)';
 
     mobileOverlayL.style.display = 'none';
     mobileOverlayR.style.display = 'none';
@@ -48,6 +69,12 @@ export function layout() {
   canvas.height = sh * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+  vcanvas.style.width = vsW + 'px';
+  vcanvas.style.height = vsH + 'px';
+  vcanvas.width = vsW * dpr;
+  vcanvas.height = vsH * dpr;
+  vctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
   const ovW = state.mobilePreview ? state.cropW : vw;
   overviewCanvas.width = ovW * dpr;
   overviewCanvas.height = 50 * dpr;
@@ -57,6 +84,13 @@ export function layout() {
   const r = canvas.getBoundingClientRect();
   state.wfLeft = r.left;
   state.wfRight = r.right;
+  if (state.bgImageSrc) {
+    bgWrap.style.left = state.bgX + 'px';
+    bgWrap.style.top = state.bgY + 'px';
+    bgWrap.style.width = state.bgW + 'px';
+    bgWrap.style.height = state.bgH + 'px';
+  }
+
   state.scopeDirty = true;
   renderOverview();
 }

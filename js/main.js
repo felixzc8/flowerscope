@@ -1,9 +1,10 @@
 import { state } from './state.js';
-import { ctx, menuBtn, menuPanel, edgeToggle, recFormatToggle, viewToggle, iconSelect, countDisplay, countDown, countUp, gradToggle, gradRow, gradColor1, gradColor2 } from './dom.js';
+import { ctx, vctx, menuBtn, menuPanel, edgeToggle, recFormatToggle, viewToggle, iconSelect, countDisplay, countDown, countUp, gradToggle, gradRow, gradColor1, gradColor2, bgWrap, bgImage, bgResize, bgInput } from './dom.js';
 import { setPlayIcon, initSwatches, applyTheme } from './theme.js';
 import { initLayout, layout } from './layout.js';
 import { drawPlayhead } from './overview.js';
 import { drawScope } from './scope.js';
+import { drawVScope } from './vscope.js';
 import { initFlowers, setAllFlowerSrc, setFlowerCount, updateAllFlowers, repositionFlowersToCrop } from './flowers.js';
 import { initPlaybackControls } from './playback.js';
 import { initRecordButton } from './recorder.js';
@@ -73,15 +74,76 @@ iconSelect.addEventListener('change', () => {
   setAllFlowerSrc(iconSelect.value);
 });
 
+bgInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (state.bgImageSrc) URL.revokeObjectURL(state.bgImageSrc);
+  state.bgImageSrc = URL.createObjectURL(file);
+  bgImage.src = state.bgImageSrc;
+  bgImage.onload = () => {
+    state.bgAspect = bgImage.naturalWidth / bgImage.naturalHeight;
+    const initH = window.innerHeight * 0.4;
+    state.bgW = initH * state.bgAspect;
+    state.bgH = initH;
+    state.bgX = window.innerWidth * 0.6;
+    state.bgY = 20;
+    bgWrap.style.display = 'block';
+    layout();
+  };
+});
+
+bgWrap.addEventListener('mousedown', e => {
+  if (e.target === bgResize) return;
+  e.preventDefault();
+  const startX = e.clientX, startY = e.clientY;
+  const origX = state.bgX, origY = state.bgY;
+  const onMove = ev => {
+    state.bgX = origX + ev.clientX - startX;
+    state.bgY = origY + ev.clientY - startY;
+    bgWrap.style.left = state.bgX + 'px';
+    bgWrap.style.top = state.bgY + 'px';
+  };
+  const onUp = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+  };
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+});
+
+bgResize.addEventListener('mousedown', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  const startX = e.clientX, startY = e.clientY;
+  const origW = state.bgW, origH = state.bgH;
+  const onMove = ev => {
+    state.bgW = Math.max(60, origW + ev.clientX - startX);
+    state.bgH = Math.max(60, origH + ev.clientY - startY);
+    bgWrap.style.width = state.bgW + 'px';
+    bgWrap.style.height = state.bgH + 'px';
+  };
+  const onUp = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+  };
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+});
+
 function mainLoop(ts) {
   requestAnimationFrame(mainLoop);
   const t = ts / 1000;
 
   if (state.isPlaying && state.analyser) {
     try { drawScope(); } catch(e) {}
+    try { drawVScope(); } catch(e) {}
     state.scopeDirty = true;
   } else if (!state.isRecording) {
-    if (state.scopeDirty) { ctx.clearRect(0, 0, state.displayW, state.displayH); state.scopeDirty = false; }
+    if (state.scopeDirty) {
+      ctx.clearRect(0, 0, state.displayW, state.displayH);
+      vctx.clearRect(0, 0, state.vDisplayW, state.vDisplayH);
+      state.scopeDirty = false;
+    }
     state.bassEnergy *= 0.94;
     if (state.bassEnergy < 0.001) state.bassEnergy = 0;
     state.bassHit = false;

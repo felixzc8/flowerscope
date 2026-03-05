@@ -1,5 +1,7 @@
 export const canvas = document.getElementById('scope');
 export const ctx = canvas.getContext('2d');
+export const vcanvas = document.getElementById('vscope');
+export const vctx = vcanvas.getContext('2d');
 export const overviewCanvas = document.getElementById('overview');
 export const ovCtx = overviewCanvas.getContext('2d');
 export const fileInput = document.getElementById('fileInput');
@@ -24,3 +26,7 @@ export const gradColor2 = document.getElementById('gradColor2');
 export const viewToggle = document.getElementById('viewToggle');
 export const mobileOverlayL = document.getElementById('mobileOverlayL');
 export const mobileOverlayR = document.getElementById('mobileOverlayR');
+export const bgWrap = document.getElementById('bgWrap');
+export const bgImage = document.getElementById('bgImage');
+export const bgResize = document.getElementById('bgResize');
+export const bgInput = document.getElementById('bgInput');
