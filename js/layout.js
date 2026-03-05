@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { canvas, ctx, vcanvas, vctx, overviewCanvas, ovCtx, mobileOverlayL, mobileOverlayR, bgWrap } from './dom.js';
+import { flowerCanvas, fctx, canvas, ctx, vcanvas, vctx, overviewCanvas, ovCtx, mobileOverlayL, mobileOverlayR, bgWrap } from './dom.js';
 import { renderOverview } from './overview.js';
 
 export function layout() {
@@ -79,6 +79,10 @@ export function layout() {
   overviewCanvas.width = ovW * dpr;
   overviewCanvas.height = 50 * dpr;
   ovCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  flowerCanvas.width = vw * dpr;
+  flowerCanvas.height = vh * dpr;
+  fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   void canvas.offsetHeight;
   const r = canvas.getBoundingClientRect();

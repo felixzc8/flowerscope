@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { overviewCanvas, ovCtx } from './dom.js';
+import { overviewCanvas, ovCtx, colorPicker } from './dom.js';
 
 function lerpHex(a, b, t) {
   const ar = parseInt(a.slice(1, 3), 16), ag = parseInt(a.slice(3, 5), 16), ab = parseInt(a.slice(5, 7), 16);
@@ -49,7 +49,9 @@ export function renderOverview() {
     g.addColorStop(1, state.gradColor2 + '66');
     fillColor = g;
   } else {
-    fillColor = state.activeHue === null ? 'rgba(255,255,255,0.4)' : `hsla(${state.activeHue}, 100%, 50%, 0.4)`;
+    const hex = colorPicker.value;
+    const cr = parseInt(hex.slice(1, 3), 16), cg = parseInt(hex.slice(3, 5), 16), cb = parseInt(hex.slice(5, 7), 16);
+    fillColor = `rgba(${cr},${cg},${cb},0.4)`;
   }
   ovCtx.fillStyle = fillColor;
   ovCtx.beginPath();
@@ -94,7 +96,9 @@ export function renderOverviewToCtx(c, x0, y0, w, h) {
     g.addColorStop(1, state.gradColor2 + '66');
     fillColor = g;
   } else {
-    fillColor = state.activeHue === null ? 'rgba(255,255,255,0.4)' : `hsla(${state.activeHue}, 100%, 50%, 0.4)`;
+    const hex = colorPicker.value;
+    const cr = parseInt(hex.slice(1, 3), 16), cg = parseInt(hex.slice(3, 5), 16), cb = parseInt(hex.slice(5, 7), 16);
+    fillColor = `rgba(${cr},${cg},${cb},0.4)`;
   }
   c.fillStyle = fillColor;
   c.beginPath();
@@ -120,7 +124,7 @@ export function renderOverviewToCtx(c, x0, y0, w, h) {
   if (state.gradient) {
     headColor = lerpHex(state.gradColor1, state.gradColor2, frac);
   } else {
-    headColor = state.activeHue === null ? '#ffffff' : `hsl(${state.activeHue}, 100%, 60%)`;
+    headColor = colorPicker.value;
   }
   c.strokeStyle = headColor;
   c.lineWidth = 2;
@@ -149,7 +153,7 @@ export function drawPlayhead() {
   if (state.gradient) {
     headColor = lerpHex(state.gradColor1, state.gradColor2, frac);
   } else {
-    headColor = state.activeHue === null ? '#ffffff' : `hsl(${state.activeHue}, 100%, 60%)`;
+    headColor = colorPicker.value;
   }
   ovCtx.strokeStyle = headColor;
   ovCtx.lineWidth = 2;

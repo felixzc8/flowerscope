@@ -42,6 +42,7 @@ export const state = {
   cropW: 0,
   recVertical: false,
   iconSrc: 'assets/shisoflower.png',
+  flowerImg: null,
   audioFileName: 'flowerscope',
   bgImageSrc: null,
   bgX: 0,

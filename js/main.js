@@ -1,11 +1,11 @@
 import { state } from './state.js';
-import { ctx, vctx, menuBtn, menuPanel, edgeToggle, recFormatToggle, viewToggle, iconSelect, countDisplay, countDown, countUp, gradToggle, gradRow, gradColor1, gradColor2, bgWrap, bgImage, bgResize, bgInput } from './dom.js';
+import { fctx, ctx, vctx, menuBtn, menuPanel, edgeToggle, recFormatToggle, viewToggle, iconInput, countDisplay, countDown, countUp, gradToggle, gradRow, gradColor1, gradColor2, bgWrap, bgImage, bgResize, bgInput } from './dom.js';
 import { setPlayIcon, initSwatches, applyTheme } from './theme.js';
 import { initLayout, layout } from './layout.js';
 import { drawPlayhead } from './overview.js';
 import { drawScope } from './scope.js';
 import { drawVScope } from './vscope.js';
-import { initFlowers, setAllFlowerSrc, setFlowerCount, updateAllFlowers, repositionFlowersToCrop } from './flowers.js';
+import { initFlowers, setAllFlowerSrc, setFlowerCount, updateAllFlowers, repositionFlowersToCrop, drawFlowersOnCanvas } from './flowers.js';
 import { initPlaybackControls } from './playback.js';
 import { initRecordButton } from './recorder.js';
 
@@ -58,20 +58,11 @@ initLayout();
 initPlaybackControls();
 initRecordButton();
 
-fetch('assets/manifest.json')
-  .then(r => r.json())
-  .then(files => {
-    for (const file of files) {
-      const opt = document.createElement('option');
-      opt.value = 'assets/' + file;
-      opt.textContent = file.replace(/\.[^.]+$/, '');
-      iconSelect.appendChild(opt);
-    }
-  })
-  .catch(() => {});
-
-iconSelect.addEventListener('change', () => {
-  setAllFlowerSrc(iconSelect.value);
+iconInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  setAllFlowerSrc(url);
 });
 
 bgInput.addEventListener('change', e => {
@@ -151,10 +142,13 @@ function mainLoop(ts) {
 
   if (state.overviewPeaks && !state.isRecording) drawPlayhead();
 
-  if (!state.isRecording) updateAllFlowers(t);
+  if (!state.isRecording) {
+    updateAllFlowers(t);
+    drawFlowersOnCanvas(fctx, window.innerWidth, window.innerHeight);
+  }
 }
 
 const preload = new Image();
 preload.src = 'assets/shisoflower.png';
-preload.onload = () => { initFlowers(); requestAnimationFrame(mainLoop); };
+preload.onload = () => { state.flowerImg = preload; initFlowers(); requestAnimationFrame(mainLoop); };
 preload.onerror = () => { initFlowers(); requestAnimationFrame(mainLoop); };

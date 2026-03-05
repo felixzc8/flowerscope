@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { fileInput, loadLabel, playBtn, infoEl, recordBtn, overviewCanvas, iconSelect } from './dom.js';
+import { fileInput, loadLabel, playBtn, infoEl, recordBtn, overviewCanvas } from './dom.js';
 import { setPlayIcon } from './theme.js';
 import { getCurrentTime, buildOverviewPeaks, renderOverview, drawPlayhead } from './overview.js';
 import { setAllFlowerSrc } from './flowers.js';
@@ -96,14 +96,7 @@ export function initPlaybackControls() {
     if (!f) return;
     if (f.type.startsWith('audio/')) loadFile(f);
     else if (f.type.startsWith('image/')) {
-      const url = URL.createObjectURL(f);
-      const name = f.name.replace(/\.[^.]+$/, '');
-      const opt = document.createElement('option');
-      opt.value = url;
-      opt.textContent = name;
-      iconSelect.appendChild(opt);
-      iconSelect.value = url;
-      setAllFlowerSrc(url);
+      setAllFlowerSrc(URL.createObjectURL(f));
     }
   });
 

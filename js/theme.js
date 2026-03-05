@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { playBtn, swatchContainer, colorPicker } from './dom.js';
 import { renderOverview, invalidateOverviewCache } from './overview.js';
+import { invalidateSpriteCache } from './flowers.js';
 
 export const colorPresets = [
   { name: 'green', hue: 135, color: '#00ff41' },
@@ -70,7 +71,15 @@ export function hexToHue(hex) {
 
 export function getFlowerFilter() {
   if (state.activeHue === null) return 'invert(1)';
-  return `invert(1) sepia(1) saturate(5) hue-rotate(${state.activeHue - 50}deg)`;
+  const hex = colorPicker.value;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 1 : d / (1 - Math.abs(2 * l - 1));
+  return `invert(1) sepia(1) saturate(${(5 * s).toFixed(1)}) hue-rotate(${state.activeHue - 50}deg) brightness(${(l * 2).toFixed(2)})`;
 }
 
 export function applyTheme() {
@@ -83,8 +92,8 @@ export function applyTheme() {
     const filter = getFlowerFilter();
     for (const f of state.flowers) {
       f.currentFilter = filter;
-      f.el.style.filter = filter;
     }
+    invalidateSpriteCache();
   }
   setPlayIcon(state.isPlaying);
   invalidateOverviewCache();

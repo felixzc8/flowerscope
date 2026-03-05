@@ -147,7 +147,7 @@ function renderScopeTo(c, w, h) {
     hl.addColorStop(1, hexAlpha(state.gradColor2, 0.4));
     c.strokeStyle = hl;
   } else {
-    c.strokeStyle = state.activeHue === null ? 'rgba(255,255,255,0.4)' : `hsla(${state.activeHue}, 50%, 85%, 0.4)`;
+    c.strokeStyle = getAccentColor(0.4);
   }
   c.lineWidth = 1 * (w / state.displayW);
   c.beginPath();

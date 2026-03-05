@@ -1,9 +1,52 @@
 import { state } from './state.js';
 import { getFlowerFilter } from './theme.js';
 
-const gradFilters = new Array(360);
-for (let i = 0; i < 360; i++) {
-  gradFilters[i] = `invert(1) sepia(1) saturate(5) hue-rotate(${i - 50}deg)`;
+const DEG = Math.PI / 180;
+const CACHE_SLOTS = 72;
+const HUE_STEP = 360 / CACHE_SLOTS;
+let spriteCache = null;
+let spriteCacheKey = '';
+let spriteW = 0, spriteH = 0;
+
+function buildSpriteCache(img) {
+  const key = img.src + '|' + img.naturalWidth;
+  if (spriteCache && spriteCacheKey === key) return;
+  spriteCacheKey = key;
+
+  spriteW = Math.min(img.naturalWidth, 256);
+  spriteH = Math.round(spriteW * (img.naturalHeight / img.naturalWidth));
+  spriteCache = new Array(CACHE_SLOTS);
+
+  for (let i = 0; i < CACHE_SLOTS; i++) {
+    const oc = document.createElement('canvas');
+    oc.width = spriteW;
+    oc.height = spriteH;
+    const ox = oc.getContext('2d');
+    const hue = i * HUE_STEP;
+    ox.filter = `invert(1) sepia(1) saturate(5) hue-rotate(${hue - 50}deg)`;
+    ox.drawImage(img, 0, 0, spriteW, spriteH);
+    spriteCache[i] = oc;
+  }
+}
+
+let singleTintCache = null;
+let singleTintKey = '';
+
+function getSingleTint(img, filter) {
+  const key = img.src + '|' + filter;
+  if (singleTintCache && singleTintKey === key) return singleTintCache;
+  singleTintKey = key;
+
+  spriteW = Math.min(img.naturalWidth, 256);
+  spriteH = Math.round(spriteW * (img.naturalHeight / img.naturalWidth));
+  const oc = document.createElement('canvas');
+  oc.width = spriteW;
+  oc.height = spriteH;
+  const ox = oc.getContext('2d');
+  ox.filter = filter;
+  ox.drawImage(img, 0, 0, spriteW, spriteH);
+  singleTintCache = oc;
+  return oc;
 }
 
 let frameL, frameW, frameH;
@@ -29,14 +72,7 @@ export class Flower {
     this.drift = 0.15 + Math.random() * 0.25;
     this.currentFilter = getFlowerFilter();
     this.currentOpacity = this.baseOp;
-
-    this.el = document.createElement('img');
-    this.el.src = state.iconSrc;
-    this.el.className = 'flower';
-    this.el.style.width = this.size + 'px';
-    this.el.style.height = this.size + 'px';
-    this.el.style.filter = this.currentFilter;
-    document.body.appendChild(this.el);
+    this.hueSlot = 0;
   }
 
   update(t) {
@@ -92,7 +128,8 @@ export class Flower {
       if (frameGradValid) {
         const t01 = Math.max(0, Math.min(1, (this.x - L) / (W - L)));
         const hue = ((frameGradH1 + frameGradDiff * t01) % 360 + 360) % 360;
-        this.currentFilter = gradFilters[Math.round(hue) % 360];
+        this.hueSlot = Math.round(hue / HUE_STEP) % CACHE_SLOTS;
+        this.currentFilter = `invert(1) sepia(1) saturate(5) hue-rotate(${Math.round(hue) - 50}deg)`;
       } else {
         this.currentFilter = getFlowerFilter();
       }
@@ -100,13 +137,53 @@ export class Flower {
 
     const opTarget = Math.min(1, this.baseOp + state.bassEnergy * 0.5);
     this.currentOpacity += (opTarget - this.currentOpacity) * 0.18;
+  }
+}
 
-    if (!state.isRecording) {
-      this.el.style.transform = `translate(${this.x - this.size / 2}px, ${this.y - this.size / 2}px) rotate(${this.rot}deg) scale(${this.scale})`;
-      this.el.style.opacity = this.currentOpacity;
-      if (state.gradient) this.el.style.filter = this.currentFilter;
+export function drawFlowersOnCanvas(c, w, h) {
+  const img = state.flowerImg;
+  c.clearRect(0, 0, w, h);
+  if (!img || !img.complete || !img.naturalWidth) return;
+
+  const ar = img.naturalHeight / img.naturalWidth;
+
+  if (state.gradient) {
+    buildSpriteCache(img);
+    c.globalCompositeOperation = 'screen';
+    for (const f of state.flowers) {
+      c.save();
+      c.globalAlpha = f.currentOpacity;
+      c.translate(f.x, f.y);
+      c.rotate(f.rot * DEG);
+      c.scale(f.scale, f.scale);
+      const sw = f.size;
+      const sh = sw * ar;
+      c.drawImage(spriteCache[f.hueSlot], -sw / 2, -sh / 2, sw, sh);
+      c.restore();
+    }
+  } else {
+    const tinted = getSingleTint(img, state.flowers.length > 0 ? state.flowers[0].currentFilter : 'none');
+    c.globalCompositeOperation = 'screen';
+    for (const f of state.flowers) {
+      c.save();
+      c.globalAlpha = f.currentOpacity;
+      c.translate(f.x, f.y);
+      c.rotate(f.rot * DEG);
+      c.scale(f.scale, f.scale);
+      const sw = f.size;
+      const sh = sw * ar;
+      c.drawImage(tinted, -sw / 2, -sh / 2, sw, sh);
+      c.restore();
     }
   }
+
+  c.globalCompositeOperation = 'source-over';
+  c.globalAlpha = 1;
+}
+
+export function invalidateSpriteCache() {
+  spriteCacheKey = '';
+  singleTintKey = '';
 }
 
 export function repositionFlowersToCrop() {
@@ -149,12 +226,14 @@ export function setFlowerCount(n) {
   if (n > current) {
     for (let i = current; i < n; i++) state.flowers.push(new Flower());
   } else if (n < current) {
-    const removed = state.flowers.splice(n);
-    for (const f of removed) f.el.remove();
+    state.flowers.splice(n);
   }
 }
 
 export function setAllFlowerSrc(src) {
   state.iconSrc = src;
-  for (const f of state.flowers) f.el.src = src;
+  invalidateSpriteCache();
+  const img = new Image();
+  img.src = src;
+  img.onload = () => { state.flowerImg = img; };
 }

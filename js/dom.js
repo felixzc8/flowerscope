@@ -1,3 +1,5 @@
+export const flowerCanvas = document.getElementById('flowerCanvas');
+export const fctx = flowerCanvas.getContext('2d');
 export const canvas = document.getElementById('scope');
 export const ctx = canvas.getContext('2d');
 export const vcanvas = document.getElementById('vscope');
@@ -14,7 +16,7 @@ export const edgeToggle = document.getElementById('edgeToggle');
 export const recordBtn = document.getElementById('recordBtn');
 export const recFormatToggle = document.getElementById('recFormatToggle');
 export const swatchContainer = document.getElementById('swatches');
-export const iconSelect = document.getElementById('iconSelect');
+export const iconInput = document.getElementById('iconInput');
 export const countDisplay = document.getElementById('countDisplay');
 export const countDown = document.getElementById('countDown');
 export const countUp = document.getElementById('countUp');
