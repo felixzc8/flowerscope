@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flowerscope</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0e0e0e;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+#scope {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+}
+#overview {
+  position: fixed;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: 50px;
+  z-index: 20;
+  cursor: pointer;
+  background: #111;
+}
+.menu-wrap {
+  position: fixed;
+  top: 16px; left: 16px;
+  z-index: 30;
+}
+.menu-toggle {
+  background: #161616;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.menu-toggle:hover { border-color: var(--accent, #00ff41); color: var(--accent, #00ff41); }
+.menu-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: #161616;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 12px 16px;
+  min-width: 220px;
+  flex-direction: column;
+  gap: 10px;
+}
+.menu-panel.open { display: flex; }
+.menu-panel button, .menu-panel label.btn {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 0.2s, color 0.2s;
+  text-align: left;
+  width: 100%;
+}
+.menu-panel button:hover, .menu-panel label.btn:hover { border-color: var(--accent, #00ff41); color: var(--accent, #00ff41); }
+.menu-panel button:disabled { opacity: 0.3; cursor: default; border-color: #333; color: #666; }
+#fileInput { display: none; }
+#info { color: var(--accent-dim, #00aa30); font-size: 11px; word-break: break-all; }
+.menu-section { display: flex; flex-direction: column; gap: 6px; }
+.menu-label { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.flower {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 15;
+  object-fit: contain;
+}
+#iconSelect {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+  transition: border-color 0.2s, color 0.2s;
+}
+#iconSelect:hover { border-color: var(--accent, #00ff41); color: var(--accent, #00ff41); }
+input[type="color"] {
+  -webkit-appearance: none;
+  border: 1px solid #333;
+  border-radius: 4px;
+  width: 32px; height: 26px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+.grad-row { display: flex; align-items: center; gap: 6px; }
+.grad-row label { color: #aaa; font-size: 12px; }
+.swatches {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.swatch {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+.swatch.active { border-color: #fff; }
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #aaa;
+  font-size: 13px;
+}
+.setting-row button {
+  width: auto;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+#playBtn {
+  position: fixed;
+  bottom: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+#playBtn:hover { opacity: 1; }
+#playBtn:disabled { opacity: 0.2; cursor: default; }
+#playBtn svg { width: 32px; height: 32px; }
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  width: 0;
+  height: 100%;
+  background: #000;
+  z-index: 18;
+  pointer-events: none;
+  display: none;
+}
+#mobileOverlayL { left: 0; }
+#mobileOverlayR { right: 0; }
+</style>
+</head>
+<body>
+
+<canvas id="scope"></canvas>
+
+<div class="menu-wrap">
+  <button class="menu-toggle" id="menuBtn">Menu</button>
+  <div class="menu-panel" id="menuPanel">
+    <div class="menu-section">
+      <label class="btn" for="fileInput" id="loadLabel">Load Audio</label>
+      <input type="file" id="fileInput" accept="audio/*">
+      <button id="recordBtn" disabled>Record</button>
+    </div>
+    <div class="menu-section">
+      <span class="menu-label">Color</span>
+      <div class="swatches" id="swatches">
+        <input type="color" id="colorPicker" value="#00ff41" title="Custom color">
+      </div>
+      <div class="setting-row">
+        <span>Gradient</span>
+        <button id="gradToggle">Off</button>
+      </div>
+      <div class="grad-row" id="gradRow" style="display:none">
+        <label>L</label><input type="color" id="gradColor1" value="#00ff41">
+        <label>R</label><input type="color" id="gradColor2" value="#4488ff">
+      </div>
+    </div>
+    <div class="menu-section">
+      <span class="menu-label">Icon</span>
+      <select id="iconSelect"><option value="assets/shisoflower.png">Flower</option></select>
+    </div>
+    <div class="menu-section">
+      <span class="menu-label">Settings</span>
+      <div class="setting-row">
+        <span>Edge wrap</span>
+        <button id="edgeToggle">On</button>
+      </div>
+      <div class="setting-row">
+        <span>Record format</span>
+        <button id="recFormatToggle">Landscape</button>
+      </div>
+      <div class="setting-row">
+        <span>View</span>
+        <button id="viewToggle">Desktop</button>
+      </div>
+      <div class="setting-row">
+        <span>Icons</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button id="countDown" style="width:auto;padding:4px 10px;font-size:12px">&minus;</button>
+          <span id="countDisplay" style="min-width:28px;text-align:center">200</span>
+          <button id="countUp" style="width:auto;padding:4px 10px;font-size:12px">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-section">
+      <span id="info">Drop an audio file or click Load Audio</span>
+    </div>
+  </div>
+</div>
+
+<button id="playBtn" disabled></button>
+<canvas id="overview"></canvas>
+
+<div id="mobileOverlayL" class="mobile-overlay"></div>
+<div id="mobileOverlayR" class="mobile-overlay"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
